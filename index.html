@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EO Chapter Health Check</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #D4A843;
+  --gold-light: #F2D68A;
+  --deep-navy: #0B1226;
+  --navy: #131B36;
+  --navy-mid: #1A2444;
+  --accent-red: #E84545;
+  --accent-orange: #F59E0B;
+  --accent-green: #10B981;
+  --accent-blue: #3B82F6;
+  --accent-purple: #8B5CF6;
+  --text-primary: #F1F5F9;
+  --text-secondary: #94A3B8;
+  --glass: rgba(255,255,255,0.05);
+  --glass-border: rgba(255,255,255,0.08);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--deep-navy);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Background animated mesh */
+.bg-mesh {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 80%, rgba(212,168,67,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(59,130,246,0.04) 0%, transparent 60%);
+}
+
+.floating-orb {
+  position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0;
+  animation: float 20s ease-in-out infinite;
+}
+.orb-1 { width:400px; height:400px; background:rgba(212,168,67,0.06); top:-100px; right:-100px; animation-delay:-5s; }
+.orb-2 { width:300px; height:300px; background:rgba(139,92,246,0.05); bottom:-50px; left:-50px; animation-delay:-10s; }
+.orb-3 { width:250px; height:250px; background:rgba(59,130,246,0.04); top:40%; left:60%; animation-delay:-15s; }
+
+@keyframes float {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(30px,-20px) scale(1.05); }
+  66% { transform: translate(-20px,30px) scale(0.95); }
+}
+
+.container {
+  position: relative; z-index: 1;
+  max-width: 720px; margin: 0 auto; padding: 24px 20px;
+  min-height: 100vh; display: flex; flex-direction: column;
+}
+
+/* INTRO SCREEN */
+.screen { display: none; flex-direction: column; align-items: center; }
+.screen.active { display: flex; }
+
+.intro-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: 40px; padding: 8px 20px; margin-bottom: 24px;
+  font-family: 'Space Mono', monospace; font-size: 11px;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--gold);
+  animation: fadeSlideDown 0.8s ease-out;
+}
+.intro-badge .dot { width:6px; height:6px; border-radius:50%; background:var(--accent-green); animation: pulse-dot 2s infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.intro-title {
+  font-size: clamp(2.2rem, 6vw, 3.5rem); font-weight: 900;
+  text-align: center; line-height: 1.1; margin-bottom: 16px;
+  animation: fadeSlideDown 0.8s ease-out 0.1s both;
+}
+.intro-title .highlight {
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.intro-subtitle {
+  font-size: 1.05rem; color: var(--text-secondary); text-align: center;
+  max-width: 500px; line-height: 1.6; margin-bottom: 32px;
+  animation: fadeSlideDown 0.8s ease-out 0.2s both;
+}
+
+.pyramid-visual {
+  width: 100%; max-width: 340px; margin-bottom: 40px;
+  animation: fadeSlideDown 0.8s ease-out 0.3s both;
+}
+.pyramid-level {
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto; padding: 14px 16px; text-align: center;
+  font-weight: 700; font-size: 0.85rem; letter-spacing: 0.5px;
+  border-radius: 6px; position: relative;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.pyramid-level:hover { transform: scale(1.03); }
+.pl-1 { width:45%; background: linear-gradient(135deg, #D4A843, #B8922E); color:#0B1226; margin-bottom:6px; }
+.pl-2 { width:60%; background: linear-gradient(135deg, #E84545, #C73636); margin-bottom:6px; }
+.pl-3 { width:78%; background: linear-gradient(135deg, #F59E0B, #D97706); color:#0B1226; margin-bottom:6px; }
+.pl-4 { width:100%; background: linear-gradient(135deg, #1A2444, #243056); border:1px solid var(--glass-border); }
+
+.pyramid-icon { margin-right: 8px; font-size: 1.1rem; }
+
+/* Email input */
+.email-section {
+  width: 100%; max-width: 420px;
+  animation: fadeSlideDown 0.8s ease-out 0.4s both;
+}
+.email-label {
+  font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;
+  font-family: 'Space Mono', monospace; letter-spacing: 1px; text-transform: uppercase;
+}
+.email-input {
+  width: 100%; padding: 14px 18px; border-radius: 12px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  color: var(--text-primary); font-family: 'Outfit'; font-size: 1rem;
+  outline: none; transition: border-color 0.3s, box-shadow 0.3s;
+  margin-bottom: 8px;
+}
+.email-input:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,168,67,0.15); }
+.email-input::placeholder { color: var(--text-secondary); opacity: 0.6; }
+.email-hint { font-size: 0.75rem; color: var(--text-secondary); opacity:0.7; margin-bottom: 24px; }
+
+.btn-start {
+  width: 100%; max-width: 420px; padding: 18px 32px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border: none; border-radius: 14px; cursor: pointer;
+  font-family: 'Outfit'; font-size: 1.1rem; font-weight: 700;
+  color: var(--deep-navy); letter-spacing: 0.5px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: fadeSlideDown 0.8s ease-out 0.5s both;
+}
+.btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(212,168,67,0.3); }
+.btn-start:active { transform: translateY(0); }
+
+/* QUIZ SCREEN */
+.quiz-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; width: 100%;
+}
+.quiz-progress-text {
+  font-family: 'Space Mono', monospace; font-size: 0.8rem;
+  color: var(--text-secondary); letter-spacing: 1px;
+}
+.quiz-category-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; font-size: 0.75rem;
+  font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+}
+.cat-liderazgo { background: rgba(26,36,68,0.8); border: 1px solid rgba(59,130,246,0.3); color: #60A5FA; }
+.cat-operaciones { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #FBBF24; }
+.cat-valor { background: rgba(232,69,69,0.1); border: 1px solid rgba(232,69,69,0.3); color: #F87171; }
+.cat-crecimiento { background: rgba(212,168,67,0.1); border: 1px solid rgba(212,168,67,0.3); color: var(--gold-light); }
+
+/* Progress bar */
+.progress-bar-container {
+  width: 100%; height: 6px; background: var(--glass);
+  border-radius: 10px; margin-bottom: 32px; overflow: hidden;
+  position: relative;
+}
+.progress-bar-fill {
+  height: 100%; border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple), var(--gold));
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+.progress-bar-fill::after {
+  content:''; position:absolute; right:0; top:-3px;
+  width:12px; height:12px; border-radius:50%;
+  background: var(--gold); box-shadow: 0 0 12px rgba(212,168,67,0.5);
+}
+
+/* Question card */
+.question-card {
+  width: 100%; background: var(--navy);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px; padding: 32px 28px;
+  position: relative; overflow: hidden;
+  animation: cardIn 0.5s ease-out;
+}
+@keyframes cardIn {
+  from { opacity:0; transform: translateX(40px) scale(0.96); }
+  to { opacity:1; transform: translateX(0) scale(1); }
+}
+.card-exit {
+  animation: cardOut 0.35s ease-in forwards;
+}
+@keyframes cardOut {
+  to { opacity:0; transform: translateX(-40px) scale(0.96); }
+}
+
+.question-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple), var(--gold));
+}
+
+.question-number {
+  font-family: 'Space Mono', monospace; font-size: 0.7rem;
+  color: var(--text-secondary); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 12px;
+}
+
+.question-text {
+  font-size: 1.2rem; font-weight: 600; line-height: 1.5;
+  margin-bottom: 28px;
+}
+
+/* Answer options */
+.options-grid { display: flex; flex-direction: column; gap: 10px; }
+
+.option-btn {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 16px 20px; border-radius: 14px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  color: var(--text-primary); font-family: 'Outfit'; font-size: 0.95rem;
+  cursor: pointer; transition: all 0.25s; text-align: left;
+  position: relative; overflow: hidden;
+}
+.option-btn::before {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(135deg, rgba(212,168,67,0.1), rgba(139,92,246,0.05));
+  opacity: 0; transition: opacity 0.25s;
+}
+.option-btn:hover { border-color: rgba(212,168,67,0.4); transform: translateX(4px); }
+.option-btn:hover::before { opacity: 1; }
+
+.option-btn.selected {
+  border-color: var(--gold);
+  background: rgba(212,168,67,0.1);
+  transform: translateX(4px);
+}
+.option-btn.selected .option-circle {
+  background: var(--gold); border-color: var(--gold);
+}
+.option-btn.selected .option-circle::after { content:'✓'; color:var(--deep-navy); font-size:12px; font-weight:700; }
+
+.option-circle {
+  width: 28px; height: 28px; min-width: 28px; border-radius: 50%;
+  border: 2px solid var(--glass-border); display: flex;
+  align-items: center; justify-content: center; transition: all 0.25s;
+  font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--text-secondary);
+  position: relative; z-index: 1;
+}
+.option-label { position: relative; z-index: 1; }
+
+/* Loading between questions */
+.loading-overlay {
+  position: fixed; inset:0; z-index: 100;
+  background: rgba(11,18,38,0.85);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 20px;
+  backdrop-filter: blur(8px);
+}
+.loading-overlay.active { display: flex; }
+
+.loader-ring {
+  width: 60px; height: 60px; border-radius: 50%;
+  border: 3px solid var(--glass-border);
+  border-top-color: var(--gold);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loader-text {
+  font-family: 'Space Mono', monospace; font-size: 0.8rem;
+  color: var(--gold); letter-spacing: 2px; text-transform: uppercase;
+  animation: pulse-text 1.5s ease-in-out infinite;
+}
+@keyframes pulse-text { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* Streak & points */
+.stats-bar {
+  display: flex; gap: 16px; margin-bottom: 20px; width: 100%;
+}
+.stat-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  font-family: 'Space Mono', monospace; font-size: 0.75rem;
+}
+.stat-icon { font-size: 1rem; }
+
+/* Point popup */
+.point-popup {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2.5rem; font-weight: 900; color: var(--gold);
+  pointer-events: none; z-index: 200;
+  animation: popUp 0.8s ease-out forwards;
+  text-shadow: 0 0 30px rgba(212,168,67,0.5);
+}
+@keyframes popUp {
+  0% { opacity:1; transform: translate(-50%,-50%) scale(0.5); }
+  50% { opacity:1; transform: translate(-50%,-70%) scale(1.2); }
+  100% { opacity:0; transform: translate(-50%,-90%) scale(0.8); }
+}
+
+/* RESULTS SCREEN */
+.results-card {
+  width: 100%; background: var(--navy);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px; padding: 40px 28px;
+  text-align: center;
+  animation: fadeSlideDown 0.8s ease-out;
+}
+
+.score-ring-container {
+  position: relative; width: 180px; height: 180px;
+  margin: 0 auto 24px;
+}
+.score-ring-bg, .score-ring-fill {
+  position: absolute; inset: 0;
+}
+.score-ring-bg circle { fill: none; stroke: var(--glass-border); stroke-width: 8; }
+.score-ring-fill circle {
+  fill: none; stroke-width: 8; stroke-linecap: round;
+  transition: stroke-dashoffset 2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.score-number {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.score-value { font-size: 3rem; font-weight: 900; }
+.score-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 2px; }
+
+.result-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+.result-desc { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 32px; }
+
+/* Category scores */
+.category-scores { display: flex; flex-direction: column; gap: 14px; margin-bottom: 32px; text-align: left; }
+.cat-score-row { display: flex; align-items: center; gap: 12px; }
+.cat-score-icon { font-size: 1.3rem; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.cat-score-icon.ci-lid { background: rgba(59,130,246,0.15); }
+.cat-score-icon.ci-ops { background: rgba(245,158,11,0.15); }
+.cat-score-icon.ci-val { background: rgba(232,69,69,0.15); }
+.cat-score-icon.ci-cre { background: rgba(212,168,67,0.15); }
+.cat-score-info { flex: 1; }
+.cat-score-name { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+.cat-score-bar-bg { height: 6px; background: var(--glass); border-radius: 6px; overflow: hidden; }
+.cat-score-bar-fill { height: 100%; border-radius: 6px; transition: width 1.5s cubic-bezier(0.34,1.56,0.64,1); }
+.csf-lid { background: linear-gradient(90deg, #3B82F6, #60A5FA); }
+.csf-ops { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.csf-val { background: linear-gradient(90deg, #E84545, #F87171); }
+.csf-cre { background: linear-gradient(90deg, #D4A843, #F2D68A); }
+.cat-score-pct { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--gold); min-width: 40px; text-align: right; }
+
+.btn-share {
+  width: 100%; padding: 16px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border: none; cursor: pointer; font-family: 'Outfit';
+  font-size: 1rem; font-weight: 700; color: var(--deep-navy);
+  transition: transform 0.2s, box-shadow 0.2s; margin-bottom: 12px;
+}
+.btn-share:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(212,168,67,0.3); }
+
+.btn-retry {
+  width: 100%; padding: 14px; border-radius: 14px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  color: var(--text-primary); font-family: 'Outfit';
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-retry:hover { border-color: var(--gold); }
+
+.submit-status {
+  margin-top: 16px; padding: 12px 16px; border-radius: 10px;
+  font-size: 0.85rem; display: none;
+}
+.submit-status.success { display: block; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #6EE7B7; }
+.submit-status.error { display: block; background: rgba(232,69,69,0.1); border: 1px solid rgba(232,69,69,0.3); color: #F87171; }
+.submit-status.sending { display: block; background: rgba(212,168,67,0.1); border: 1px solid rgba(212,168,67,0.3); color: var(--gold); }
+
+/* Sound toggle */
+.sound-toggle {
+  position: fixed; top: 20px; right: 20px; z-index: 50;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  color: var(--text-primary); cursor: pointer; font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.sound-toggle:hover { border-color: var(--gold); }
+
+/* Confetti */
+.confetti-piece {
+  position: fixed; width: 10px; height: 10px;
+  z-index: 300; pointer-events: none;
+  animation: confettiFall 3s ease-in forwards;
+}
+@keyframes confettiFall {
+  0% { opacity:1; transform: translateY(-20vh) rotate(0deg); }
+  100% { opacity:0; transform: translateY(110vh) rotate(720deg); }
+}
+
+@keyframes fadeSlideDown {
+  from { opacity:0; transform: translateY(-20px); }
+  to { opacity:1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .container { padding: 16px 14px; }
+  .question-card { padding: 24px 18px; }
+  .results-card { padding: 28px 18px; }
+  .option-btn { padding: 14px 16px; font-size: 0.9rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-mesh"></div>
+<div class="floating-orb orb-1"></div>
+<div class="floating-orb orb-2"></div>
+<div class="floating-orb orb-3"></div>
+
+<button class="sound-toggle" id="soundToggle" title="Sonido On/Off">🔊</button>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text" id="loaderText">Analizando...</div>
+</div>
+
+<div class="container">
+
+  <!-- INTRO SCREEN -->
+  <div class="screen active" id="introScreen" style="justify-content:center; min-height:100vh; padding-top:40px;">
+    <div class="intro-badge"><span class="dot"></span> Health Check Activo</div>
+    <h1 class="intro-title">¿Qué tan saludable<br>es tu <span class="highlight">Capítulo EO</span>?</h1>
+    <p class="intro-subtitle">Descúbrelo en 3 minutos. Evaluamos los 4 pilares del Chapter Health Model para darte un diagnóstico preciso.</p>
+
+    <div class="pyramid-visual">
+      <div class="pyramid-level pl-1"><span class="pyramid-icon">📈</span> Crecimiento</div>
+      <div class="pyramid-level pl-2"><span class="pyramid-icon">💎</span> Valor para Miembros</div>
+      <div class="pyramid-level pl-3"><span class="pyramid-icon">⚙️</span> Excelencia Operativa</div>
+      <div class="pyramid-level pl-4"><span class="pyramid-icon">🏛️</span> Liderazgo</div>
+    </div>
+
+    <div class="email-section">
+      <div class="email-label">Tu correo (opcional)</div>
+      <input type="email" class="email-input" id="userEmail" placeholder="nombre@ejemplo.com">
+      <div class="email-hint">Para recibir tus resultados. No es obligatorio.</div>
+    </div>
+
+    <button class="btn-start" id="btnStart">
+      Comenzar Diagnóstico →
+    </button>
+  </div>
+
+  <!-- QUIZ SCREEN -->
+  <div class="screen" id="quizScreen" style="width:100%; padding-top:20px;">
+    <div class="stats-bar">
+      <div class="stat-pill"><span class="stat-icon">⚡</span> <span id="pointsDisplay">0</span> pts</div>
+      <div class="stat-pill"><span class="stat-icon">🔥</span> <span id="streakDisplay">0</span> racha</div>
+    </div>
+
+    <div class="quiz-header">
+      <span class="quiz-progress-text" id="progressText">1 / 15</span>
+      <span class="quiz-category-tag" id="categoryTag"></span>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
+    </div>
+
+    <div id="questionContainer"></div>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div class="screen" id="resultsScreen" style="width:100%; padding-top:20px;">
+    <div class="results-card">
+      <div class="score-ring-container">
+        <svg class="score-ring-bg" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="78"></circle>
+        </svg>
+        <svg class="score-ring-fill" viewBox="0 0 180 180">
+          <circle id="scoreCircle" cx="90" cy="90" r="78"
+            stroke-dasharray="490" stroke-dashoffset="490"
+            transform="rotate(-90 90 90)"></circle>
+        </svg>
+        <div class="score-number">
+          <span class="score-value" id="scoreValue">0</span>
+          <span class="score-label">de 100</span>
+        </div>
+      </div>
+
+      <h2 class="result-title" id="resultTitle"></h2>
+      <p class="result-desc" id="resultDesc"></p>
+
+      <div class="category-scores">
+        <div class="cat-score-row">
+          <div class="cat-score-icon ci-lid">🏛️</div>
+          <div class="cat-score-info">
+            <div class="cat-score-name">Liderazgo</div>
+            <div class="cat-score-bar-bg"><div class="cat-score-bar-fill csf-lid" id="barLid" style="width:0%"></div></div>
+          </div>
+          <span class="cat-score-pct" id="pctLid">0%</span>
+        </div>
+        <div class="cat-score-row">
+          <div class="cat-score-icon ci-ops">⚙️</div>
+          <div class="cat-score-info">
+            <div class="cat-score-name">Excelencia Operativa</div>
+            <div class="cat-score-bar-bg"><div class="cat-score-bar-fill csf-ops" id="barOps" style="width:0%"></div></div>
+          </div>
+          <span class="cat-score-pct" id="pctOps">0%</span>
+        </div>
+        <div class="cat-score-row">
+          <div class="cat-score-icon ci-val">💎</div>
+          <div class="cat-score-info">
+            <div class="cat-score-name">Valor para Miembros</div>
+            <div class="cat-score-bar-bg"><div class="cat-score-bar-fill csf-val" id="barVal" style="width:0%"></div></div>
+          </div>
+          <span class="cat-score-pct" id="pctVal">0%</span>
+        </div>
+        <div class="cat-score-row">
+          <div class="cat-score-icon ci-cre">📈</div>
+          <div class="cat-score-info">
+            <div class="cat-score-name">Crecimiento</div>
+            <div class="cat-score-bar-bg"><div class="cat-score-bar-fill csf-cre" id="barCre" style="width:0%"></div></div>
+          </div>
+          <span class="cat-score-pct" id="pctCre">0%</span>
+        </div>
+      </div>
+
+      <button class="btn-share" id="btnShare">📋 Copiar Resultados</button>
+      <button class="btn-retry" id="btnRetry">🔄 Hacer el test otra vez</button>
+
+      <div class="submit-status" id="submitStatus"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============ AUDIO ENGINE ============
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let soundEnabled = true;
+
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, type='sine', duration=0.15, vol=0.12) {
+  if (!soundEnabled) return;
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(); osc.stop(audioCtx.currentTime + duration);
+}
+
+function sfxClick() { playTone(880, 'sine', 0.08, 0.1); }
+function sfxSelect() { playTone(660, 'triangle', 0.12, 0.1); setTimeout(()=>playTone(880,'triangle',0.12,0.1),80); }
+function sfxTransition() { playTone(440,'sine',0.2,0.08); setTimeout(()=>playTone(554,'sine',0.2,0.08),100); setTimeout(()=>playTone(660,'sine',0.3,0.08),200); }
+function sfxComplete() {
+  [523,659,784,1047].forEach((f,i)=>{
+    setTimeout(()=>playTone(f,'triangle',0.3,0.12), i*120);
+  });
+}
+function sfxStreak() { playTone(1047,'square',0.1,0.06); setTimeout(()=>playTone(1319,'square',0.15,0.06),60); }
+
+document.getElementById('soundToggle').addEventListener('click', ()=>{
+  soundEnabled = !soundEnabled;
+  document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+  if(soundEnabled) sfxClick();
+});
+
+// ============ QUESTIONS ============
+const questions = [
+  // LIDERAZGO (4)
+  { cat:'liderazgo', catLabel:'Liderazgo', catClass:'cat-liderazgo',
+    q:'¿Tu capítulo tiene identificado al próximo presidente con al menos 12 meses de anticipación?',
+    opts:['Sí, está confirmado y en formación','Hay candidatos pero no es oficial','No hay nadie identificado aún','No sé / No aplica'],
+    scores:[4,2,0,1]},
+  { cat:'liderazgo', catLabel:'Liderazgo', catClass:'cat-liderazgo',
+    q:'¿Los moderadores de foro han completado su capacitación oficial de EO?',
+    opts:['Todos están certificados','La mayoría sí','Solo algunos','Ninguno o no sé'],
+    scores:[4,3,1,0]},
+  { cat:'liderazgo', catLabel:'Liderazgo', catClass:'cat-liderazgo',
+    q:'¿Tu junta directiva cuenta con un plan estratégico documentado para el año fiscal?',
+    opts:['Sí, con objetivos y KPIs claros','Hay un plan pero informal','Se discutió pero no se documentó','No existe un plan'],
+    scores:[4,2,1,0]},
+  { cat:'liderazgo', catLabel:'Liderazgo', catClass:'cat-liderazgo',
+    q:'¿Los líderes del capítulo participan activamente en eventos regionales y globales de EO?',
+    opts:['Sí, consistentemente','A veces, cuando pueden','Rara vez','Nunca'],
+    scores:[4,2,1,0]},
+
+  // EXCELENCIA OPERATIVA (4)
+  { cat:'operaciones', catLabel:'Operaciones', catClass:'cat-operaciones',
+    q:'¿La junta directiva se reúne al menos una vez al mes de manera formal?',
+    opts:['Sí, con agenda y actas','Sí, pero sin actas formales','Cada 2-3 meses','Casi nunca'],
+    scores:[4,2,1,0]},
+  { cat:'operaciones', catLabel:'Operaciones', catClass:'cat-operaciones',
+    q:'¿Los estados financieros del capítulo se comparten de forma transparente con los miembros?',
+    opts:['Sí, regularmente','Solo cuando lo piden','Se comparten a la junta únicamente','No se comparten'],
+    scores:[4,2,1,0]},
+  { cat:'operaciones', catLabel:'Operaciones', catClass:'cat-operaciones',
+    q:'¿El capítulo tiene documentados sus procesos clave (onboarding, eventos, foros)?',
+    opts:['Sí, todos documentados','Algunos están documentados','Se hace de memoria','No hay documentación'],
+    scores:[4,2,1,0]},
+  { cat:'operaciones', catLabel:'Operaciones', catClass:'cat-operaciones',
+    q:'¿Tu capítulo cuenta con personal administrativo de apoyo (Chapter Administrator)?',
+    opts:['Sí, dedicado al capítulo','Compartido con otro capítulo','Voluntarios hacen el trabajo','No hay apoyo admin'],
+    scores:[4,3,1,0]},
+
+  // VALOR PARA MIEMBROS (4)
+  { cat:'valor', catLabel:'Valor Miembros', catClass:'cat-valor',
+    q:'¿Los nuevos miembros son colocados en un foro dentro de los primeros 90 días?',
+    opts:['Sí, siempre dentro de 90 días','Generalmente en 3-6 meses','Toma más de 6 meses','No hay proceso definido'],
+    scores:[4,2,1,0]},
+  { cat:'valor', catLabel:'Valor Miembros', catClass:'cat-valor',
+    q:'¿Se realizan encuestas de satisfacción a los miembros al menos una vez al año?',
+    opts:['Sí, con plan de acción','Sí, pero sin seguimiento','Se ha hecho alguna vez','Nunca'],
+    scores:[4,2,1,0]},
+  { cat:'valor', catLabel:'Valor Miembros', catClass:'cat-valor',
+    q:'¿Cuál es el nivel de asistencia promedio a los eventos del capítulo?',
+    opts:['Más del 70%','50-70%','30-50%','Menos del 30%'],
+    scores:[4,3,1,0]},
+  { cat:'valor', catLabel:'Valor Miembros', catClass:'cat-valor',
+    q:'¿Los miembros participan activamente en eventos nacionales y regionales de EO?',
+    opts:['Sí, alta participación','Participación moderada','Solo unos pocos van','Casi nadie participa'],
+    scores:[4,2,1,0]},
+
+  // CRECIMIENTO (3)
+  { cat:'crecimiento', catLabel:'Crecimiento', catClass:'cat-crecimiento',
+    q:'¿Tu capítulo tiene un objetivo claro de nuevos miembros para este año fiscal?',
+    opts:['Sí, con estrategia definida','Sí, pero sin plan concreto','Es un número informal','No hay objetivo'],
+    scores:[4,2,1,0]},
+  { cat:'crecimiento', catLabel:'Crecimiento', catClass:'cat-crecimiento',
+    q:'¿Cuál fue la tasa de renovación de miembros en el último año fiscal?',
+    opts:['Más del 90%','80-90%','70-80%','Menos del 70%'],
+    scores:[4,3,1,0]},
+  { cat:'crecimiento', catLabel:'Crecimiento', catClass:'cat-crecimiento',
+    q:'¿El capítulo organiza eventos de prospección para atraer nuevos miembros potenciales?',
+    opts:['Sí, regularmente','Alguno que otro al año','Lo hemos pensado','No hacemos prospección'],
+    scores:[4,2,1,0]},
+];
+
+// ============ STATE ============
+let currentQ = 0;
+let answers = [];
+let points = 0;
+let streak = 0;
+let userEmail = '';
+
+const SHEET_URL = 'https://docs.google.com/forms/d/e/PLACEHOLDER/formResponse'; // placeholder
+const APPS_SCRIPT_URL = ''; // Will use direct Google Sheets API via Apps Script
+
+// ============ ELEMENTS ============
+const introScreen = document.getElementById('introScreen');
+const quizScreen = document.getElementById('quizScreen');
+const resultsScreen = document.getElementById('resultsScreen');
+const questionContainer = document.getElementById('questionContainer');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const categoryTag = document.getElementById('categoryTag');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loaderText = document.getElementById('loaderText');
+
+const loadingMessages = [
+  'Analizando respuesta...',
+  'Procesando datos...',
+  'Calibrando métricas...',
+  'Evaluando indicadores...',
+  'Actualizando diagnóstico...',
+  'Calculando impacto...',
+];
+
+// ============ FUNCTIONS ============
+function switchScreen(from, to) {
+  from.classList.remove('active');
+  to.classList.add('active');
+}
+
+function showLoading(callback) {
+  loaderText.textContent = loadingMessages[Math.floor(Math.random()*loadingMessages.length)];
+  loadingOverlay.classList.add('active');
+  sfxTransition();
+  setTimeout(()=>{
+    loadingOverlay.classList.remove('active');
+    if(callback) callback();
+  }, 800 + Math.random()*400);
+}
+
+function showPointPopup(pts) {
+  const el = document.createElement('div');
+  el.className = 'point-popup';
+  el.textContent = `+${pts}`;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 900);
+}
+
+function updateStats() {
+  document.getElementById('pointsDisplay').textContent = points;
+  document.getElementById('streakDisplay').textContent = streak;
+}
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  progressText.textContent = `${currentQ+1} / ${questions.length}`;
+  progressBar.style.width = `${((currentQ)/questions.length)*100}%`;
+  categoryTag.className = `quiz-category-tag ${q.catClass}`;
+  categoryTag.textContent = q.catLabel;
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+  card.innerHTML = `
+    <div class="question-number">Pregunta ${currentQ+1} de ${questions.length}</div>
+    <div class="question-text">${q.q}</div>
+    <div class="options-grid">
+      ${q.opts.map((opt,i) => `
+        <button class="option-btn" data-index="${i}">
+          <span class="option-circle">${String.fromCharCode(65+i)}</span>
+          <span class="option-label">${opt}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+
+  questionContainer.innerHTML = '';
+  questionContainer.appendChild(card);
+
+  card.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleAnswer(parseInt(btn.dataset.index), card));
+  });
+}
+
+function handleAnswer(index, card) {
+  const q = questions[currentQ];
+  const score = q.scores[index];
+
+  // Visual feedback
+  card.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+  card.querySelectorAll('.option-btn')[index].classList.add('selected');
+  sfxSelect();
+
+  // Points & streak
+  const earnedPts = score > 0 ? score * 10 + (streak * 5) : 0;
+  if (score >= 3) {
+    streak++;
+    if (streak >= 3) sfxStreak();
+  } else {
+    streak = 0;
+  }
+  points += earnedPts;
+  if (earnedPts > 0) showPointPopup(earnedPts);
+  updateStats();
+
+  answers.push({ cat: q.cat, score, maxScore: 4 });
+
+  // Delay then move on
+  setTimeout(() => {
+    card.classList.add('card-exit');
+    setTimeout(() => {
+      currentQ++;
+      if (currentQ < questions.length) {
+        showLoading(() => renderQuestion());
+      } else {
+        showLoading(() => showResults());
+      }
+    }, 350);
+  }, 500);
+}
+
+function calculateResults() {
+  const cats = { liderazgo:{s:0,m:0}, operaciones:{s:0,m:0}, valor:{s:0,m:0}, crecimiento:{s:0,m:0} };
+  answers.forEach(a => { cats[a.cat].s += a.score; cats[a.cat].m += a.maxScore; });
+
+  const catPcts = {};
+  for(let c in cats) { catPcts[c] = Math.round((cats[c].s / cats[c].m) * 100); }
+
+  const totalScore = answers.reduce((s,a)=>s+a.score,0);
+  const totalMax = answers.reduce((s,a)=>s+a.maxScore,0);
+  const overall = Math.round((totalScore/totalMax)*100);
+
+  return { catPcts, overall };
+}
+
+function showResults() {
+  switchScreen(quizScreen, resultsScreen);
+  sfxComplete();
+  launchConfetti();
+
+  const { catPcts, overall } = calculateResults();
+
+  // Animate score ring
+  const circle = document.getElementById('scoreCircle');
+  const circumference = 2 * Math.PI * 78; // ~490
+  const offset = circumference - (overall / 100) * circumference;
+
+  let strokeColor;
+  if (overall >= 80) strokeColor = '#10B981';
+  else if (overall >= 60) strokeColor = '#F59E0B';
+  else if (overall >= 40) strokeColor = '#F97316';
+  else strokeColor = '#E84545';
+
+  circle.style.stroke = strokeColor;
+  setTimeout(()=>{ circle.style.strokeDashoffset = offset; }, 100);
+
+  // Animate score number
+  let counter = 0;
+  const scoreEl = document.getElementById('scoreValue');
+  const interval = setInterval(()=>{
+    counter += 2;
+    if(counter >= overall) { counter = overall; clearInterval(interval); }
+    scoreEl.textContent = counter;
+  }, 20);
+
+  // Title & desc
+  let title, desc;
+  if (overall >= 85) {
+    title = '🏆 ¡Capítulo Ejemplar!';
+    desc = 'Tu capítulo es un modelo a seguir. Los cuatro pilares están sólidos y trabajando en armonía. ¡Sigan así y compartan sus mejores prácticas con otros capítulos!';
+  } else if (overall >= 70) {
+    title = '💪 Capítulo Saludable';
+    desc = 'Tu capítulo está en buen camino con bases sólidas. Hay áreas de oportunidad que, al atenderlas, los llevarán al siguiente nivel de excelencia.';
+  } else if (overall >= 50) {
+    title = '⚡ En Desarrollo';
+    desc = 'Tu capítulo tiene potencial pero necesita atención en varias áreas clave. Enfócate primero en fortalecer el liderazgo, que es la base de todo lo demás.';
+  } else {
+    title = '🚨 Necesita Atención Urgente';
+    desc = 'Tu capítulo requiere un plan de acción inmediato. Te recomendamos contactar al equipo de Thriving Chapters de EO para recibir apoyo personalizado.';
+  }
+
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultDesc').textContent = desc;
+
+  // Category bars
+  setTimeout(()=>{
+    document.getElementById('barLid').style.width = catPcts.liderazgo + '%';
+    document.getElementById('pctLid').textContent = catPcts.liderazgo + '%';
+    document.getElementById('barOps').style.width = catPcts.operaciones + '%';
+    document.getElementById('pctOps').textContent = catPcts.operaciones + '%';
+    document.getElementById('barVal').style.width = catPcts.valor + '%';
+    document.getElementById('pctVal').textContent = catPcts.valor + '%';
+    document.getElementById('barCre').style.width = catPcts.crecimiento + '%';
+    document.getElementById('pctCre').textContent = catPcts.crecimiento + '%';
+  }, 400);
+
+  // Auto-submit to Google Sheets
+  submitToSheet(catPcts, overall);
+}
+
+function launchConfetti() {
+  const colors = ['#D4A843','#F2D68A','#E84545','#3B82F6','#8B5CF6','#10B981','#F59E0B'];
+  for(let i=0; i<50; i++){
+    const c = document.createElement('div');
+    c.className = 'confetti-piece';
+    c.style.left = Math.random()*100 + 'vw';
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+    c.style.animationDelay = Math.random()*1.5 + 's';
+    c.style.borderRadius = Math.random()>0.5 ? '50%' : '2px';
+    c.style.width = (6+Math.random()*8)+'px';
+    c.style.height = (6+Math.random()*8)+'px';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), 4000);
+  }
+}
+
+async function submitToSheet(catPcts, overall) {
+  const status = document.getElementById('submitStatus');
+  status.className = 'submit-status sending';
+  status.textContent = '📡 Enviando resultados...';
+
+  const GOOGLE_SHEET_ID = '16Bl_ixG8cJ9uSyIWe3HJBDJ3g8_q_TzosASEFW8i40s';
+
+  // Build data row
+  const now = new Date();
+  const timestamp = now.toLocaleString('es-DO', { timeZone:'America/Santo_Domingo' });
+  const data = {
+    timestamp,
+    email: userEmail || 'Anónimo',
+    overall,
+    liderazgo: catPcts.liderazgo,
+    operaciones: catPcts.operaciones,
+    valor: catPcts.valor,
+    crecimiento: catPcts.crecimiento,
+    answers: answers.map((a,i)=> `P${i+1}:${a.score}/${a.maxScore}`).join(' | ')
+  };
+
+  // Since we can't use Apps Script directly without deployment,
+  // we'll use a Google Form or show the data for manual copy.
+  // For now, attempt fetch to a Google Apps Script web app URL.
+  // If no Apps Script is set up, we fallback gracefully.
+
+  try {
+    // Attempt to submit via Google Sheets API using a simple GET request to an Apps Script
+    // You can deploy this Apps Script: 
+    // function doGet(e) { 
+    //   var sheet = SpreadsheetApp.openById('16Bl_ixG8cJ9uSyIWe3HJBDJ3g8_q_TzosASEFW8i40s').getActiveSheet();
+    //   sheet.appendRow([e.parameter.ts, e.parameter.email, e.parameter.overall, e.parameter.lid, e.parameter.ops, e.parameter.val, e.parameter.cre, e.parameter.answers]);
+    //   return ContentService.createTextOutput('OK');
+    // }
+
+    const params = new URLSearchParams({
+      ts: timestamp,
+      email: data.email,
+      overall: overall,
+      lid: catPcts.liderazgo,
+      ops: catPcts.operaciones,
+      val: catPcts.valor,
+      cre: catPcts.crecimiento,
+      answers: data.answers
+    });
+
+    // NOTE: Replace this URL with your deployed Google Apps Script URL
+    const APPS_SCRIPT_WEB_APP = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+    if (APPS_SCRIPT_WEB_APP === 'YOUR_APPS_SCRIPT_URL_HERE') {
+      // No Apps Script configured - show data for manual copy
+      status.className = 'submit-status success';
+      status.innerHTML = `✅ Resultados listos. Para conectar con Google Sheets, configura el Apps Script.<br><br>
+        <strong style="font-family:'Space Mono',monospace;font-size:0.7rem;word-break:break-all;color:var(--text-secondary);">
+        ${timestamp} | ${data.email} | General: ${overall}% | Lid: ${catPcts.liderazgo}% | Ops: ${catPcts.operaciones}% | Val: ${catPcts.valor}% | Cre: ${catPcts.crecimiento}%
+        </strong>`;
+      return;
+    }
+
+    const response = await fetch(`${APPS_SCRIPT_WEB_APP}?${params.toString()}`, { mode: 'no-cors' });
+    status.className = 'submit-status success';
+    status.textContent = '✅ ¡Resultados enviados exitosamente al Google Sheet!';
+  } catch(err) {
+    status.className = 'submit-status error';
+    status.textContent = '⚠️ No se pudieron enviar automáticamente. Los datos están disponibles arriba.';
+  }
+}
+
+// ============ EVENT LISTENERS ============
+document.getElementById('btnStart').addEventListener('click', ()=>{
+  sfxClick();
+  userEmail = document.getElementById('userEmail').value.trim();
+  ensureAudio();
+  showLoading(()=>{
+    switchScreen(introScreen, quizScreen);
+    renderQuestion();
+  });
+});
+
+document.getElementById('btnShare').addEventListener('click', ()=>{
+  sfxClick();
+  const { catPcts, overall } = calculateResults();
+  const text = `🏥 EO Chapter Health Check\n\n` +
+    `📊 Score General: ${overall}%\n` +
+    `🏛️ Liderazgo: ${catPcts.liderazgo}%\n` +
+    `⚙️ Operaciones: ${catPcts.operaciones}%\n` +
+    `💎 Valor Miembros: ${catPcts.valor}%\n` +
+    `📈 Crecimiento: ${catPcts.crecimiento}%\n\n` +
+    `¡Haz tu diagnóstico en el link!`;
+  navigator.clipboard.writeText(text).then(()=>{
+    document.getElementById('btnShare').textContent = '✅ ¡Copiado!';
+    setTimeout(()=>{ document.getElementById('btnShare').textContent = '📋 Copiar Resultados'; }, 2000);
+  });
+});
+
+document.getElementById('btnRetry').addEventListener('click', ()=>{
+  sfxClick();
+  currentQ = 0; answers = []; points = 0; streak = 0;
+  updateStats();
+  switchScreen(resultsScreen, introScreen);
+});
+</script>
+</body>
+</html>
