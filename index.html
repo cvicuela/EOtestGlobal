@@ -408,12 +408,96 @@ body {
   to { opacity:1; transform: translateY(0); }
 }
 
+/* Gender selection */
+.gender-section {
+  width: 100%; max-width: 420px; margin-bottom: 20px;
+  animation: fadeSlideDown 0.8s ease-out 0.35s both;
+}
+.gender-label {
+  font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px;
+  font-family: 'Space Mono', monospace; letter-spacing: 1px; text-transform: uppercase;
+}
+.gender-select {
+  width: 100%; padding: 14px 18px; border-radius: 12px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  color: var(--text-primary); font-family: 'Outfit'; font-size: 1rem;
+  outline: none; transition: border-color 0.3s, box-shadow 0.3s;
+  cursor: pointer; -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394A3B8' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 16px center;
+}
+.gender-select:focus { border-color: var(--gold); box-shadow: 0 0 20px rgba(212,168,67,0.15); }
+.gender-select option { background: var(--navy); color: var(--text-primary); }
+.gender-error {
+  color: var(--accent-red); font-size: 0.8rem; margin-top: 6px; display: none;
+  font-family: 'Space Mono', monospace;
+}
+
+/* Reveal image container */
+.reveal-image-container {
+  width: 100%; max-width: 280px; margin: 0 auto 20px;
+  position: relative; border-radius: 16px; overflow: hidden;
+  border: 2px solid var(--glass-border);
+  background: var(--navy);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.reveal-image {
+  width: 100%; height: 340px; object-fit: cover;
+  transition: filter 1s ease-out;
+  display: block;
+}
+.reveal-hint {
+  text-align: center; padding: 10px 12px;
+  font-size: 0.75rem; color: var(--text-secondary);
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.5px;
+  background: var(--navy);
+}
+.reveal-progress-bar {
+  height: 3px; background: var(--glass);
+  border-radius: 3px; margin: 0 12px 10px;
+  overflow: hidden;
+}
+.reveal-progress-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent-purple), var(--accent-red), var(--gold));
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Funny reveal */
+.funny-reveal {
+  width: 100%; max-width: 320px; margin: 0 auto 24px;
+  border-radius: 16px; overflow: hidden;
+  border: 3px solid var(--gold);
+  position: relative;
+  animation: funnyBounce 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 8px 40px rgba(212,168,67,0.3);
+}
+@keyframes funnyBounce {
+  0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+  50% { transform: scale(1.1) rotate(3deg); }
+  70% { transform: scale(0.95) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.funny-reveal img {
+  width: 100%; display: block;
+}
+.funny-text {
+  text-align: center; padding: 14px;
+  font-size: 1rem; font-weight: 700;
+  color: var(--gold); background: var(--navy);
+  letter-spacing: 0.5px;
+}
+
 /* Responsive */
 @media (max-width: 480px) {
   .container { padding: 16px 14px; }
   .question-card { padding: 24px 18px; }
   .results-card { padding: 28px 18px; }
   .option-btn { padding: 14px 16px; font-size: 0.9rem; }
+  .reveal-image-container { max-width: 240px; }
+  .reveal-image { height: 280px; }
+  .funny-reveal { max-width: 280px; }
 }
 </style>
 </head>
@@ -446,6 +530,16 @@ body {
       <div class="pyramid-level pl-4"><span class="pyramid-icon">🏛️</span> Liderazgo</div>
     </div>
 
+    <div class="gender-section">
+      <div class="gender-label">Antes de comenzar... *</div>
+      <select class="gender-select" id="genderSelect">
+        <option value="" disabled selected>Selecciona tu género</option>
+        <option value="hombre">Hombre</option>
+        <option value="mujer">Mujer</option>
+      </select>
+      <div class="gender-error" id="genderError">Por favor selecciona tu género para continuar</div>
+    </div>
+
     <div class="email-section">
       <div class="email-label">Tu correo (opcional)</div>
       <input type="email" class="email-input" id="userEmail" placeholder="nombre@ejemplo.com">
@@ -473,11 +567,23 @@ body {
       <div class="progress-bar-fill" id="progressBar" style="width:0%"></div>
     </div>
 
+    <div class="reveal-image-container" id="revealImageContainer">
+      <img class="reveal-image" id="revealImage" src="" alt="Imagen misteriosa" style="filter: blur(30px);">
+      <div class="reveal-progress-bar">
+        <div class="reveal-progress-fill" id="revealProgressFill" style="width:0%"></div>
+      </div>
+      <div class="reveal-hint" id="revealHint">🔥 Responde para revelar la imagen...</div>
+    </div>
+
     <div id="questionContainer"></div>
   </div>
 
   <!-- RESULTS SCREEN -->
   <div class="screen" id="resultsScreen" style="width:100%; padding-top:20px;">
+    <div class="funny-reveal" id="funnyReveal" style="display:none;">
+      <img id="funnyImage" src="" alt="¡Sorpresa!">
+      <div class="funny-text" id="funnyText"></div>
+    </div>
     <div class="results-card">
       <div class="score-ring-container">
         <svg class="score-ring-bg" viewBox="0 0 180 180">
@@ -658,6 +764,18 @@ let answers = [];
 let points = 0;
 let streak = 0;
 let userEmail = '';
+let selectedGender = '';
+
+// Image URLs based on gender selection
+const revealImages = {
+  hombre: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop&crop=faces',
+  mujer: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=500&fit=crop&crop=faces'
+};
+const funnyImages = [
+  { url: 'https://images.unsplash.com/photo-1574158622682-e40e69881006?w=400&h=500&fit=crop', text: '¡JAJAJA! ¿Esperabas otra cosa? 🐱😂' },
+  { url: 'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=400&h=500&fit=crop', text: '¡Sorpresa! El gato te está juzgando 😼' },
+  { url: 'https://images.unsplash.com/photo-1583337130417-13104dec14a7?w=400&h=500&fit=crop', text: '¡Plot twist! Aquí está tu premio 🏆😂' }
+];
 
 const SHEET_URL = 'https://docs.google.com/forms/d/e/PLACEHOLDER/formResponse'; // placeholder
 const APPS_SCRIPT_URL = ''; // Will use direct Google Sheets API via Apps Script
@@ -711,12 +829,35 @@ function updateStats() {
   document.getElementById('streakDisplay').textContent = streak;
 }
 
+function updateRevealImage() {
+  const progress = currentQ / questions.length;
+  const blur = Math.max(2, 30 - (progress * 28));
+  const revealImg = document.getElementById('revealImage');
+  const revealFill = document.getElementById('revealProgressFill');
+  const revealHint = document.getElementById('revealHint');
+
+  revealImg.style.filter = `blur(${blur}px)`;
+  revealFill.style.width = `${progress * 100}%`;
+
+  if (progress < 0.3) {
+    revealHint.textContent = '🔥 Responde para revelar la imagen...';
+  } else if (progress < 0.6) {
+    revealHint.textContent = '👀 Se está aclarando... ¡sigue así!';
+  } else if (progress < 0.9) {
+    revealHint.textContent = '😍 ¡Ya casi se ve! Solo faltan unas más...';
+  } else {
+    revealHint.textContent = '🤩 ¡Una pregunta más y se revela todo!';
+  }
+}
+
 function renderQuestion() {
   const q = questions[currentQ];
   progressText.textContent = `${currentQ+1} / ${questions.length}`;
   progressBar.style.width = `${((currentQ)/questions.length)*100}%`;
   categoryTag.className = `quiz-category-tag ${q.catClass}`;
   categoryTag.textContent = q.catLabel;
+
+  updateRevealImage();
 
   const card = document.createElement('div');
   card.className = 'question-card';
@@ -796,6 +937,15 @@ function showResults() {
   switchScreen(quizScreen, resultsScreen);
   sfxComplete();
   launchConfetti();
+
+  // Show funny image instead of the expected reveal
+  const funny = funnyImages[Math.floor(Math.random() * funnyImages.length)];
+  const funnyReveal = document.getElementById('funnyReveal');
+  const funnyImage = document.getElementById('funnyImage');
+  const funnyText = document.getElementById('funnyText');
+  funnyReveal.style.display = 'block';
+  funnyImage.src = funny.url;
+  funnyText.textContent = funny.text;
 
   const { catPcts, overall } = calculateResults();
 
@@ -944,6 +1094,24 @@ async function submitToSheet(catPcts, overall) {
 // ============ EVENT LISTENERS ============
 document.getElementById('btnStart').addEventListener('click', ()=>{
   sfxClick();
+
+  // Validate gender selection
+  selectedGender = document.getElementById('genderSelect').value;
+  const genderError = document.getElementById('genderError');
+  if (!selectedGender) {
+    genderError.style.display = 'block';
+    document.getElementById('genderSelect').style.borderColor = 'var(--accent-red)';
+    return;
+  }
+  genderError.style.display = 'none';
+  document.getElementById('genderSelect').style.borderColor = '';
+
+  // Set the reveal image based on gender
+  const revealImg = document.getElementById('revealImage');
+  revealImg.src = revealImages[selectedGender];
+  revealImg.style.filter = 'blur(30px)';
+  document.getElementById('revealProgressFill').style.width = '0%';
+
   userEmail = document.getElementById('userEmail').value.trim();
   ensureAudio();
   showLoading(()=>{
@@ -971,7 +1139,16 @@ document.getElementById('btnShare').addEventListener('click', ()=>{
 document.getElementById('btnRetry').addEventListener('click', ()=>{
   sfxClick();
   currentQ = 0; answers = []; points = 0; streak = 0;
+  selectedGender = '';
   updateStats();
+  // Reset gender dropdown
+  document.getElementById('genderSelect').value = '';
+  // Hide funny image
+  document.getElementById('funnyReveal').style.display = 'none';
+  // Reset reveal image
+  document.getElementById('revealImage').style.filter = 'blur(30px)';
+  document.getElementById('revealProgressFill').style.width = '0%';
+  document.getElementById('revealHint').textContent = '🔥 Responde para revelar la imagen...';
   switchScreen(resultsScreen, introScreen);
 });
 </script>
